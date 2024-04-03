@@ -20,7 +20,7 @@ def load(image_path):
 
     ### YOUR CODE HERE
     # Use skimage io.imread
-    pass
+    out = io.imread(image_path)
     ### END YOUR CODE
 
     # Let's convert the image to be between the correct range.
@@ -45,7 +45,7 @@ def dim_image(image):
     out = None
 
     ### YOUR CODE HERE
-    pass
+    out = 0.5 * np.power(image,2)
     ### END YOUR CODE
 
     return out
@@ -66,7 +66,7 @@ def convert_to_grey_scale(image):
     out = None
 
     ### YOUR CODE HERE
-    pass
+    out = color.rgb2gray(image)
     ### END YOUR CODE
 
     return out
@@ -83,10 +83,15 @@ def rgb_exclusion(image, channel):
         out: numpy array of shape(image_height, image_width, 3).
     """
 
-    out = None
+    out = image.copy()
 
     ### YOUR CODE HERE
-    pass
+    if channel == 'R':
+        out[:,:,0] = 0
+    elif channel == 'G':
+        out[:,:,1] = 0
+    elif channel == 'B':
+        out[:,:,2] = 0
     ### END YOUR CODE
 
     return out
@@ -107,7 +112,12 @@ def lab_decomposition(image, channel):
     out = None
 
     ### YOUR CODE HERE
-    pass
+    if channel == 'L':
+        out = lab[:,:,0]
+    elif channel == 'A':
+        out = lab[:,:,1]
+    elif channel == 'B':
+        out = lab[:,:,2]
     ### END YOUR CODE
 
     return out
@@ -128,7 +138,12 @@ def hsv_decomposition(image, channel='H'):
     out = None
 
     ### YOUR CODE HERE
-    pass
+    if channel == 'H':
+        out = hsv[:,:,0]
+    elif channel == 'S':
+        out = hsv[:,:,1]
+    elif channel == 'V':
+        out = hsv[:,:,2]
     ### END YOUR CODE
 
     return out
@@ -154,7 +169,9 @@ def mix_images(image1, image2, channel1, channel2):
 
     out = None
     ### YOUR CODE HERE
-    pass
+    left_half = rgb_exclusion(image1,channel1)[:,:int(image1.shape[1]/2),:]
+    right_half = rgb_exclusion(image2,channel2)[:,int(image2.shape[1]/2):,:]
+    out = np.concatenate([left_half,right_half],axis=1)
     ### END YOUR CODE
 
     return out
@@ -181,9 +198,18 @@ def mix_quadrants(image):
         out: numpy array of shape(image_height, image_width, 3).
     """
     out = None
-
+    m,n = image.shape[:2]
+    m_mid = int(m/2)
+    n_mid = int(n/2)
     ### YOUR CODE HERE
-    pass
+    top_left = rgb_exclusion(image[:m_mid,:n_mid,:],'R')
+    top_right = dim_image(image[:m_mid,n_mid:,:])
+    bottom_left = np.power(image[m_mid:,:n_mid,:],0.5)
+    bottom_right = rgb_exclusion(image[m_mid:,n_mid:,:],'R')
+
+    top = np.concatenate([top_left,top_right],axis=1)
+    bottom = np.concatenate([bottom_left,bottom_right],axis=1)
+    out = np.concatenate([top,bottom],axis=0)
     ### END YOUR CODE
 
     return out
