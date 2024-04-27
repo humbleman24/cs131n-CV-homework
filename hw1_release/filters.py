@@ -29,7 +29,22 @@ def conv_nested(image, kernel):
     out = np.zeros((Hi, Wi))
 
     ### YOUR CODE HERE
-    pass
+    pad_height = (Hk - 1) // 2
+    pad_width = (Wk - 1) // 2
+    # I pad the image first to keep the dimension of the output convoluded image
+    image = zero_pad(image,pad_height,pad_width)
+    for i in range(pad_height, Hi+pad_height):
+        for j in range(pad_width, Wi+pad_width):
+            sum = 0
+            for k in range(Hk):
+                for l in range(Wk):
+                    # two things need to be consider
+                    # kernel should be flipped
+                    # how to match the pixel in the image
+                    #                          + means flip             () match pixel
+                    sum += kernel[k][l] * image[i + (pad_height-k)][j + (pad_width-l)]
+            out[i-pad_height][j-pad_width] = sum
+
     ### END YOUR CODE
 
     return out
@@ -56,7 +71,12 @@ def zero_pad(image, pad_height, pad_width):
     out = None
 
     ### YOUR CODE HERE
-    pass
+    zero_row = np.zeros([pad_height,W])
+    zero_column = np.zeros([H+2*pad_height,pad_width])
+    out = np.vstack([zero_row,image])
+    out = np.vstack([out,zero_row])
+    out = np.hstack([zero_column,out])
+    out = np.hstack([out, zero_column])
     ### END YOUR CODE
     return out
 
@@ -83,9 +103,19 @@ def conv_fast(image, kernel):
     Hi, Wi = image.shape
     Hk, Wk = kernel.shape
     out = np.zeros((Hi, Wi))
+    fliped_kernel = np.zeros_like(kernel)
 
     ### YOUR CODE HERE
-    pass
+    pad_height = (Hk - 1) // 2
+    pad_width = (Wk - 1) // 2
+    image = zero_pad(image,pad_height,pad_width)
+    # flip kernel
+    fliped_kernel = np.flip(kernel)
+    # convolution
+    for i in range(0, Hi):
+        for j in range(0, Wi):
+            sum = np.sum(image[i:i+Hk,j:j+Wk] * fliped_kernel)
+            out[i][j] = sum
     ### END YOUR CODE
 
     return out
@@ -104,7 +134,17 @@ def conv_faster(image, kernel):
     out = np.zeros((Hi, Wi))
 
     ### YOUR CODE HERE
-    pass
+    pad_height = (Hk - 1) // 2
+    pad_width = (Wk - 1) // 2
+    image = zero_pad(image,pad_height,pad_width)
+    # flip kernel
+    fliped_kernel = np.flip(kernel)
+    mat = np.zeros((Hi*Wi,Hk*Wk))
+    for i in range(Hi*Wi):
+        row = i // Wi
+        column = i % Wi
+        mat[i] = image[row:row+Hk,column:column+Wk].reshape(1,Hk*Wk)
+    out = mat.dot(fliped_kernel.reshape(Hk*Wk,1)).reshape(Hi,Wi)
     ### END YOUR CODE
 
     return out
