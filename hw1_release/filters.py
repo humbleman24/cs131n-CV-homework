@@ -29,8 +29,8 @@ def conv_nested(image, kernel):
     out = np.zeros((Hi, Wi))
 
     ### YOUR CODE HERE
-    pad_height = (Hk - 1) // 2
-    pad_width = (Wk - 1) // 2
+    pad_height = Hk // 2
+    pad_width = Wk // 2
     # I pad the image first to keep the dimension of the output convoluded image
     image = zero_pad(image,pad_height,pad_width)
     for i in range(pad_height, Hi+pad_height):
@@ -106,8 +106,8 @@ def conv_fast(image, kernel):
     fliped_kernel = np.zeros_like(kernel)
 
     ### YOUR CODE HERE
-    pad_height = (Hk - 1) // 2
-    pad_width = (Wk - 1) // 2
+    pad_height = Hk // 2
+    pad_width = Wk // 2
     image = zero_pad(image,pad_height,pad_width)
     # flip kernel
     fliped_kernel = np.flip(kernel)
@@ -134,8 +134,8 @@ def conv_faster(image, kernel):
     out = np.zeros((Hi, Wi))
 
     ### YOUR CODE HERE
-    pad_height = (Hk - 1) // 2
-    pad_width = (Wk - 1) // 2
+    pad_height = Hk // 2
+    pad_width = Wk // 2
     image = zero_pad(image,pad_height,pad_width)
     # flip kernel
     fliped_kernel = np.flip(kernel)
@@ -161,11 +161,23 @@ def cross_correlation(f, g):
     Returns:
         out: numpy array of shape (Hf, Wf).
     """
-
-    out = None
+    Hf, Wf = f.shape
+    Hg, Wg = g.shape
+    out = np.zeros((Hf,Wf))
     ### YOUR CODE HERE
-    pass
+    pad_height = Hg // 2
+    pad_width = Wg // 2
+    image = zero_pad(f,pad_height,pad_width)
+    for i in range(Hf):
+        for j in range(Wf):
+            out[i][j] = np.sum(image[i:i+Hg,j:j+Wg] * g)
     ### END YOUR CODE
+    '''if take advantage of conv_fast, just fliped the g filter first
+        and than pass to the conv_fast function
+    g = np.flip(g)
+    out = conv_fast(f,g)    
+    '''
+
 
     return out
 
@@ -186,7 +198,9 @@ def zero_mean_cross_correlation(f, g):
 
     out = None
     ### YOUR CODE HERE
-    pass
+    g = g - np.mean(g)
+    g = np.flip(g)
+    out = conv_fast(f,g)
     ### END YOUR CODE
 
     return out
@@ -208,9 +222,26 @@ def normalized_cross_correlation(f, g):
         out: numpy array of shape (Hf, Wf).
     """
 
-    out = None
+    Hf, Wf = f.shape
+    Hg, Wg = g.shape
+    out = np.zeros((Hf,Wf))
     ### YOUR CODE HERE
-    pass
+    pad_height = Hg // 2
+    pad_width = Wg // 2
+    image = zero_pad(f,pad_height,pad_width)
+    g = normalize(g)    
+    for i in range(Hf):
+        for j in range(Wf):
+            out[i][j] = np.sum(normalize(image[i:i+Hg,j:j+Wg]) * g)
     ### END YOUR CODE
-
     return out
+
+def normalize(array):
+    # this function is used to normalize the patch of image and kernel
+    # improve the robustness to the light change in cross-correlation
+    mean = np.mean(array)
+    std = np.std(array)
+    # it should use the standard deviation
+    #var = np.var(array)
+
+    return (array-mean)/std
