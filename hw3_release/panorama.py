@@ -289,7 +289,17 @@ def hog_descriptor(patch, pixels_per_cell=(8,8)):
 
     # Compute histogram per cell
     ### YOUR CODE HERE
-    pass
+    for i in range(rows):
+        for j in range(cols):
+            for m in range(G_cells.shape[2]):
+                for n in range(G_cells.shape[3]):
+                    idx = int(theta_cells[i, j, m, n] // degrees_per_bin)
+                    if idx == 9:
+                        idx = 8
+                    cells[i, j, idx] += G_cells[i, j, m, n]
+                    
+    cells = (cells - np.mean(cells)) / np.std(cells)
+    block = cells.reshape(-1)
     ### YOUR CODE HERE
 
     return block
@@ -325,7 +335,16 @@ def linear_blend(img1_warped, img2_warped):
     left_margin = np.argmax(img2_mask[out_H//2, :].reshape(1, out_W), 1)[0]
 
     ### YOUR CODE HERE
-    pass
+    weight1 = np.ones_like(img1_warped)
+    weight2 = np.ones_like(img2_warped)
+    if left_margin > right_margin:
+        right_margin, left_margin = left_margin, right_margin
+    n = right_margin - left_margin + 1
+    weight1[:, left_margin:right_margin + 1] = np.linspace(1, 0, n)
+    weight2[:, left_margin:right_margin + 1] = np.linspace(0, 1, n)
+    merged = weight1 * img1_warped + weight2 * img2_warped   
+    overlap = img1_mask + img2_mask
+    merged /= np.maximum(overlap, 1)
     ### END YOUR CODE
 
     return merged
@@ -366,7 +385,46 @@ def stitch_multiple_images(imgs, desc_func=simple_descriptor, patch_size=5):
         matches.append(mtchs)
 
     ### YOUR CODE HERE
-    pass
-    ### END YOUR CODE
+    ransacs = []
+    for i in range(len(matches)):
+        H, _ = ransac(keypoints[i], keypoints[i + 1], matches[i])
+        if i < 1:
+            H = np.linalg.inv(H)
+        elif i > 1:
+            H = ransacs[-1].dot(H)
+        ransacs.append(H)
 
-    return panorama
+    imgs_need = [imgs[0], imgs[2], imgs[3]]
+    output_shape, offset = get_output_space(imgs[1], imgs_need, ransacs)
+
+    imgs_warp = []
+    imgs_mask = []
+    merged = None
+    overlap = None
+    for i, img in enumerate(imgs):
+        if i < 1:
+            img_warp = warp_image(img, ransacs[i], output_shape, offset)
+            img_mask = (img_warp != -1)
+            img_warp[~img_mask] = 0
+        elif i == 1:
+            img_warp = warp_image(img, np.eye(3), output_shape, offset)
+            img_mask = (img_warp != -1)
+            img_warp[~img_mask] = 0
+        elif i > 1:
+            img_warp = warp_image(img, ransacs[i - 1], output_shape, offset)
+            img_mask = (img_warp != -1)
+            img_warp[~img_mask] = 0
+        imgs_warp.append(img_warp)
+        imgs_mask.append(img_mask)
+        if merged is None:
+            merged = img_warp.copy()
+        else:
+            merged += img_warp
+        if overlap is None:
+            overlap = img_mask * 1.0
+        else:
+            overlap += img_mask
+
+    panorama = merged / np.maximum(overlap, 1)
+    ### END YOUR CODE
+    return imgs_warp, panorama
